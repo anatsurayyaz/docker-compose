@@ -1,0 +1,90 @@
+# compose name
+name: my-wise-word-compose
+
+# tell compose to create this all services
+services:
+  # backend app service section
+  backend:
+    container_name: app
+    # set container system environment
+    environment:
+      - DB_USER=${DB_USER}
+      - DB_PASS=${DB_PASS}
+      - DB_NAME=${DB_NAME}
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+    # build with given Dockerfile 
+    build:
+      context: ./go-sample-postgres/
+      dockerfile: Dockerfile
+    # environment file
+    env_file:
+      - .env
+    # port to expose <HOST_PORT>:<CONTAINER_PORT>
+    ports:
+      - 8080:80
+    # restart policy, The policy always restarts the container until its removal
+    # https://github.com/compose-spec/compose-spec/blob/master/spec.md#restart
+    restart: always
+    # container will waiting postgresdb until condition service is healthy (indicate via healthcheck)
+    depends_on:
+      postgresdb:
+        condition: service_healthy
+    # container network
+    networks:
+      - net_my_compose_anatsurayyaz
+
+  # # frontend web service section
+  # frontend:
+  #   container_name: vue_container
+  #   # build with given Dockerfile
+  #   build:
+  #     context: ./vue_sample/
+  #     dockerfile: Dockerfile
+  #   # environment file
+  #   env_file:
+  #     - .env
+  #   # port to expose <HOST_PORT>:<CONTAINER_PORT>
+  #   ports:
+  #     - 80:80
+  #   # restart policy, The policy always restarts the container until its removal
+  #   # https://github.com/compose-spec/compose-spec/blob/master/spec.md#restart
+  #   restart: always
+  #   # container network
+  #   networks:
+  #     - net_my_compose_anatsurayyaz
+
+  # database service name postgresdb
+  postgresdb:
+    # image to pull and use
+    image: postgres:latest
+    container_name: database
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASS}
+      - POSTGRES_DB=${DB_NAME}
+      - DATABASE_HOST=${DB_HOST}
+    env_file:
+      - .env
+    ports:
+      - '5436:5432'
+    # map persistent data stores
+    volumes:
+      - vol_my_compose_anatsurayyaz:/var/lib/postgresql/data
+    networks:
+      - net_my_compose_anatsurayyaz
+    # indicator container is healty
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+# Volume for persistent postgres db data
+volumes:
+  vol_my_compose_anatsurayyaz:
+
+# Networks to be created to facilitate communication between containers
+networks:
+  net_my_compose_anatsurayyaz:
+    driver: bridge
